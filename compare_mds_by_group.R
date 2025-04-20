@@ -3,7 +3,8 @@
 # ------------------------------------------------------
 # Script: compare_mds_by_group.R
 # Purpose: Compare MDS between Cancer and Not Cancer,
-#          and color all subtypes (cancer + non-cancer)
+#          color all subtypes, and report median/IQR values
+# Author: Zozan Ismail, 2025
 # ------------------------------------------------------
 
 # Load libraries
@@ -32,23 +33,33 @@ merged <- meta %>%
 # --- Define cancer group and assign subtypes ---
 merged <- merged %>%
   mutate(
-    Cancer_Status = ifelse(Utfall == "Cancer", "Cancer", "Not Cancer"),
-    Subtype = ifelse(Utfall == "Cancer", Disease_Stage, Disease_Stage)  # unified field
+    Cancer_Status = ifelse(tolower(Utfall) == "cancer", "Cancer", "Not Cancer"),
+    Subtype = Disease_Stage
   )
 
-# --- Full custom color palette ---
-custom_colors <- c(
-  # Cancer subtypes
-  "Localized"     = "#66c2a5",
-  "Metastatic"    = "#984ea3",
-  "Hematopoetic"  = "#ff7f00",
+# --- Compute median and IQR for each group ---
+summary_stats <- merged %>%
+  group_by(Cancer_Status) %>%
+  summarise(
+    Median = round(median(MDS), 5),
+    IQR_Lower = round(quantile(MDS, 0.25), 5),
+    IQR_Upper = round(quantile(MDS, 0.75), 5),
+    .groups = "drop"
+  )
 
-  # Non-cancer subtypes
-  "Autoimmune"    = "#e41a1c",
-  "Inflammatory"  = "#377eb8",
-  "Infectious"    = "#a6d854",
-  "No diagnosis"  = "#b3e2cd",
-  "Other"         = "#fbb4ae"
+cat("📊 Median and IQR of MDS by group:\n")
+print(summary_stats)
+
+# --- Improved subtype color palette ---
+custom_colors <- c(
+  "Localized"     = "#1b9e77",  # teal
+  "Metastatic"    = "#d95f02",  # orange
+  "Hematopoetic"  = "#7570b3",  # purple
+  "Autoimmune"    = "#e7298a",  # pink
+  "Inflammatory"  = "#66a61e",  # green
+  "Infectious"    = "#e6ab02",  # yellow-brown
+  "No diagnosis"  = "#a6761d",  # brown
+  "Other"         = "#666666"   # dark grey
 )
 
 # --- Plot: MDS by group with subtype colors ---
@@ -57,9 +68,9 @@ p <- ggplot(merged, aes(x = Cancer_Status, y = MDS)) +
   geom_jitter(aes(color = Subtype), width = 0.2, size = 2, alpha = 0.8) +
   scale_color_manual(values = custom_colors, na.value = "grey50") +
   labs(
-    title = "MDS: Cancer vs Not Cancer (All Subtypes Colored)",
+    title = "",
     x = "",
-    y = "Motif Diversity Score",
+    y = "Motif Diversity Score (MDS)",
     color = "Subtype"
   ) +
   theme_minimal(base_size = 13) +

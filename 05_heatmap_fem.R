@@ -39,7 +39,7 @@ metadata <- meta_raw %>%
     SampleID = as.character(SampleID),
     Cancer_Status = case_when(
       tolower(Cancer_Status) == "cancer" ~ "Cancer",
-      tolower(Cancer_Status) == "not cancer" ~ "Control",
+      tolower(Cancer_Status) == "not cancer" ~ "Non-cancer",
       TRUE ~ as.character(Cancer_Status)
     )
   ) %>%
@@ -49,24 +49,10 @@ metadata <- meta_raw %>%
 motif_matrix <- motif_matrix[, metadata$SampleID]
 
 # ------------------------------
-# 3. Filter top 100 variable motifs with fallback
+# 3. Use all 256 motifs
 # ------------------------------
-top_n <- 100
-motif_var <- apply(motif_matrix, 1, var)
-
-cat("📊 Motif variance summary:\n")
-print(summary(motif_var))
-
-top_motifs <- names(sort(motif_var, decreasing = TRUE))[1:top_n]
-
-if (length(top_motifs) == 0 || any(is.na(top_motifs))) {
-  warning("⚠️ No top motifs found — using full motif matrix.")
-  motif_matrix_subset <- motif_matrix
-} else {
-  cat("✅ Top motifs selected:\n")
-  print(head(top_motifs))
-  motif_matrix_subset <- motif_matrix[top_motifs, ]
-}
+cat("📊 Using all 256 motifs for heatmap.\n")
+motif_matrix_subset <- motif_matrix
 
 # ------------------------------
 # 4. Prepare annotations
@@ -75,21 +61,22 @@ annotation_df <- metadata %>%
   select(SampleID, Cancer_Status, Subtype) %>%
   column_to_rownames("SampleID")
 
+# Improved and distinct color palette
 ann_colors <- list(
-  Cancer_Status = c("Cancer" = "#e41a1c", "Control" = "#377eb8"),
+  Cancer_Status = c("Cancer" = "#e41a1c", "Non-cancer" = "#377eb8"),
   Subtype = c(
-    "Localized"     = "#4daf4a",
-    "Metastatic"    = "#984ea3",
-    "Hematopoetic"  = "#ff7f00",
-    "Autoimmune"    = "#a6cee3",
-    "Inflammatory"  = "#1f78b4",
-    "Infectious"    = "#b2df8a",
-    "No diagnosis"  = "#33a02c",
-    "Other"         = "#fb9a99"
+    "Localized"     = "#1b9e77",  # teal green
+    "Metastatic"    = "#d95f02",  # orange
+    "Hematopoetic"  = "#7570b3",  # purple
+    "Autoimmune"    = "#e7298a",  # pink/red
+    "Inflammatory"  = "#66a61e",  # olive green
+    "Infectious"    = "#e6ab02",  # mustard yellow
+    "No diagnosis"  = "#a6761d",  # brown
+    "Other"         = "#666666"   # grey
   )
 )
 
-# Custom color palette
+# Custom color gradient for motif values
 color_palette <- colorRampPalette(c("navy", "white", "firebrick3"))(100)
 
 # ------------------------------

@@ -1,72 +1,94 @@
 #!/usr/bin/env Rscript
 
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------
 # Script: compare_motifs_wilcox.R
-# Purpose: Compare 4-mer motif frequencies between Cancer and Control
+# Purpose: Perform motif-wise statistical comparison between cancer
+#          and non-cancer samples using Wilcoxon rank-sum test.
+# Output: Table with p-values, adjusted p-values, group medians,
+#         and median differences (Δ median)
 # Author: Zozan Ismail, 2025
-# --------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 suppressPackageStartupMessages({
   library(dplyr)
   library(readr)
   library(readxl)
-  library(tibble)
   library(stringr)
+  library(tibble)
 })
 
 # -------------------------------
-# Load motif frequency matrix
+# 1. Load motif frequency matrix
 # -------------------------------
-motif_mat <- read_tsv("fem_output/motif_frequency_matrix.tsv", show_col_types = FALSE) %>%
+motif_file <- "fem_output/motif_frequency_matrix.tsv"
+motif_mat <- read_tsv(motif_file, show_col_types = FALSE) %>%
   column_to_rownames("motif") %>%
   as.data.frame()
 
 # -------------------------------
-# Load metadata
+# 2. Load sample metadata
 # -------------------------------
-meta <- read_excel("Cohortfil_Zozan_FEM_withsubclasses250408.xlsx") %>%
+metadata_file <- "Cohortfil_Zozan_FEM_withsubclasses250408.xlsx"
+meta <- read_excel(metadata_file) %>%
   rename(SampleID = StudieID, Status = Utfall) %>%
   mutate(
     SampleID = as.character(SampleID),
     Status = case_when(
       str_to_lower(Status) == "cancer" ~ "Cancer",
-      str_to_lower(Status) == "not cancer" ~ "Control",
+      str_to_lower(Status) == "not cancer" ~ "Non-cancer",
       TRUE ~ Status
     )
   )
 
-# Keep only samples present in both data sets
+# -------------------------------
+# 3. Match and filter samples
+# -------------------------------
 common_samples <- intersect(meta$SampleID, colnames(motif_mat))
 motif_mat <- motif_mat[, common_samples]
 meta <- meta %>% filter(SampleID %in% common_samples)
 
 # -------------------------------
-# Wilcoxon test for each motif
+# 4. Perform Wilcoxon test + Δ median for each motif
 # -------------------------------
 results <- lapply(rownames(motif_mat), function(motif) {
   vec <- as.numeric(motif_mat[motif, ])
   group <- meta$Status[match(colnames(motif_mat), meta$SampleID)]
-
-  if (length(unique(group)) == 2) {
-    test <- wilcox.test(vec[group == "Cancer"], vec[group == "Control"])
-    median_diff <- median(vec[group == "Cancer"]) - median(vec[group == "Control"])
+  
+  values_cancer <- vec[group == "Cancer"]
+  values_control <- vec[group == "Non-cancer"]
+  
+  if (length(values_cancer) > 0 && length(values_control) > 0) {
+    test <- wilcox.test(values_cancer, values_control)
+    
+    median_cancer <- median(values_cancer, na.rm = TRUE)
+    median_control <- median(values_control, na.rm = TRUE)
+    delta_median <- median_cancer - median_control
+    
     return(data.frame(
-      motif = motif,
-      p_value = test$p.value,
-      median_diff = median_diff
+      Motif = motif,
+      P_value = test$p.value,
+      Median_Cancer = round(median_cancer, 2),
+      Median_Non_Cancer = round(median_control, 2),
+      Delta_Median = round(delta_median, 2)
     ))
   } else {
     return(NULL)
   }
 })
 
-# Combine results and adjust p-values
-df <- bind_rows(results) %>%
-  mutate(p_adj = p.adjust(p_value, method = "fdr")) %>%
-  arrange(p_adj)
+# -------------------------------
+# 5. Combine and adjust p-values
+# -------------------------------
+results_df <- bind_rows(results) %>%
+  mutate(
+    Adj_P_value = round(p.adjust(P_value, method = "fdr"), 3),
+    P_value = round(P_value, 3)
+  ) %>%
+  arrange(Adj_P_value)
 
 # -------------------------------
-# Output
+# 6. Save result table
 # -------------------------------
-write_tsv(df, "fem_output/wilcox_motif_comparison.tsv")
-cat("✅ Wilcoxon test results saved to fem_output/wilcox_motif_comparison.tsv\n")
+output_file <- "fem_output/wilcox_motif_comparison_with_effectsize.tsv"
+write_tsv(results_df, output_file)
+cat("✅ Motif-wise comparison saved to:", output_file, "\n")

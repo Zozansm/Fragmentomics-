@@ -1,6 +1,4 @@
-from pathlib import Path
 
-readme_text = """
 # Fragmentomics: Analysis of Fragment End Motifs in cfDNA
 
 Welcome to the official repository for the **Fragmentomics** Bachelor’s thesis project. This study explores the diagnostic potential of **fragment end motifs (FEMs)** and **fragment size distributions** in circulating cell-free DNA (cfDNA) using data from patients with suspected cancer. The repository includes the full analysis pipeline implemented in **Bash** and **R**, with scripts for filtering sequencing data, computing motif frequencies, and visualizing results.

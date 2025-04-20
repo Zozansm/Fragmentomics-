@@ -1,7 +1,7 @@
 
 # Fragmentomics: Analysis of Fragment End Motifs in cfDNA
 
-Welcome to the official repository for the **Fragmentomics** Bachelor’s thesis project. This study explores the diagnostic potential of **fragment end motifs (FEMs)** and **fragment size distributions** in circulating cell-free DNA (cfDNA) using data from patients with suspected cancer. The repository includes the full analysis pipeline implemented in **Bash** and **R**, with scripts for filtering sequencing data, computing motif frequencies, and visualizing results.
+Welcome to the official repository for the **Fragmentomics** Bachelor’s thesis project. This study explores the diagnostic potential of **fragment end motifs (FEMs)** and **fragment size distributions** in circulating cell-free DNA (cfDNA) using data from patients with cancer and no cancer. The repository includes the full analysis pipeline implemented in **Bash** and **R**, with scripts for filtering sequencing data, computing motif frequencies, and visualizing results.
 
 ---
 
@@ -68,19 +68,6 @@ Fragmentation patterns in cfDNA reflect biological processes like apoptosis and 
 See figures and tables in the `plots/` or `fem_output/` directories for full visual results.
 
 ---
-packages_section = """
-## R Packages Used
-
-The following R packages are used throughout the analysis pipeline:
-
-- `ggplot2`: For data visualization (e.g., boxplots, scatter plots).
-- `pheatmap`: To create unsupervised heatmaps with clustering.
-- `readr`, `readxl`: For reading data from `.tsv` and Excel files.
-- `dplyr`, `tibble`, `stringr`: For efficient data manipulation and transformation.
-- `ggpubr`: For adding statistical test annotations to plots.
-- `RColorBrewer`: For improved color palettes in plots.
-
-Make sure these packages are installed before running the scripts. You can install them via:
 
 ```r
 install.packages(c("ggplot2", "pheatmap", "readr", "readxl", "dplyr", "tibble", "stringr", "ggpubr", "RColorBrewer"))

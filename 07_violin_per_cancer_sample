@@ -1,0 +1,76 @@
+#!/usr/bin/env Rscript
+
+# -------------------------------------------------------------------------
+# Script: 07_violin_per_cancer_sample.R
+# Purpose: Visualize % fragments <158bp per cancer sample vs grouped non-cancer
+# Author: Zozan Ismail, 2025
+# -------------------------------------------------------------------------
+
+suppressPackageStartupMessages({
+  library(readr)
+  library(readxl)
+  library(dplyr)
+  library(ggplot2)
+  library(stringr)
+})
+
+# -----------------------
+# Configuration
+# -----------------------
+summary_file <- "fem_output/fragment_size_summary.tsv"
+metadata_file <- "Cohortfil_Zozan_FEM_withsubclasses250408.xlsx"
+output_plot <- "fem_output/violin_per_cancer_sample_158bp.pdf"
+short_threshold <- 150
+
+# -----------------------
+# Load data
+# -----------------------
+cat("📂 Reading fragment size summary...\n")
+summary_data <- read_tsv(summary_file, show_col_types = FALSE) %>%
+  mutate(SampleID = as.character(SampleID))  # Ensure SampleID is character
+
+cat("📂 Reading metadata...\n")
+metadata <- read_excel(metadata_file) %>%
+  rename(SampleID = StudieID, Cancer_Status = Utfall) %>%
+  mutate(
+    SampleID = as.character(SampleID),
+    Cancer_Status = case_when(
+      str_to_lower(Cancer_Status) == "cancer" ~ "Cancer",
+      str_to_lower(Cancer_Status) == "not cancer" ~ "Non-cancer",
+      TRUE ~ Cancer_Status
+    )
+  )
+
+# -----------------------
+# Merge and prepare data
+# -----------------------
+cat("🔗 Merging data...\n")
+merged_data <- summary_data %>%
+  inner_join(metadata, by = "SampleID") %>%
+  mutate(Group_Label = ifelse(Cancer_Status == "Cancer", SampleID, "Non-cancer"))
+
+# -----------------------
+# Plot: violin per cancer sample vs grouped non-cancer
+# -----------------------
+cat("🎻 Generating violin plot...\n")
+
+p <- ggplot(merged_data, aes(x = Group_Label, y = Percent_Short, fill = Cancer_Status)) +
+  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), trim = FALSE, scale = "width") +
+  geom_boxplot(width = 0.1, outlier.shape = NA, alpha = 0.5) +
+  scale_fill_manual(values = c("Cancer" = "#e41a1c", "Non-cancer" = "#377eb8")) +
+  labs(
+    title = sprintf("%% Fragments < %dbp per Cancer Sample vs Non-cancer Group", short_threshold),
+    x = "Sample ID (Cancer) or Group",
+    y = sprintf("%% Fragments < %dbp", short_threshold)
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    legend.position = "none"
+  )
+
+# -----------------------
+# Save plot
+# -----------------------
+ggsave(output_plot, p, width = 10, height = 6)
+cat("✅ Plot saved to:", output_plot, "\n")
